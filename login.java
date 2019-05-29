@@ -53,6 +53,20 @@ class login extends Thread{
   }
  }
 
+ private int location(String received,int space2){
+  int pointer,space;
+  for(pointer=0,space=0;pointer<=received.length()-1 && space<space2;pointer++)
+   if(received.charAt(pointer)==' ') space++;
+  return pointer;
+ }
+
+ private int location2(String received,int space2){
+  int pointer,space;
+  for(pointer=0,space=0;pointer<=received.length()-1 && space<space2;pointer++)
+   if(received.charAt(pointer)==',') space++;
+  return pointer;
+ }
+
  public void readCookie(){
   try{
    String cookie = dis.readLine();
@@ -69,7 +83,7 @@ class login extends Thread{
   String send,send2;
   try{
    if(mnemonic.equals("VER")){
-    send = mnemonic + " " + trialid + " MSNP7 MSNP6 MSNP5 MSNP4 CVRO";
+    send = mnemonic + " " + trialid + " MSNP8 CVRO";
     System.out.println(send);
     dos.writeBytes(send); dos.writeByte(0xd); dos.writeByte(0xa);
    }
@@ -78,23 +92,45 @@ class login extends Thread{
     System.out.println(send);
     dos.writeBytes(send); dos.writeByte(0xd); dos.writeByte(0xa);
    }
-   if(mnemonic.equals("INF")){
-    send = mnemonic + " " + trialid;
+   if(mnemonic.equals("CVR")){
+    send = mnemonic + " " + trialid + " 0x0412 winnt 5.1 i386 MSNMSGR 5.0.0515 MSMSGS YourEmail";
     System.out.println(send);
     dos.writeBytes(send); dos.writeByte(0xd); dos.writeByte(0xa);
    }
    if(mnemonic.equals("USR")){
-    if(rmnemonic==null || rmnemonic.equals("INF")){
-     send = mnemonic + " " + trialid + " MD5 I " + id;
+    if(rmnemonic==null || rmnemonic.equals("CVR")){
+     send = mnemonic + " " + trialid + " TWN I " + id;
      System.out.println(send);
      dos.writeBytes(send); dos.writeByte(0xd); dos.writeByte(0xa); 
     }else{
-     md5code md = md5code.getInstance();
-     send = param + password;
-     send = md.hashData(send.getBytes());
-     send = mnemonic + " "  + trialid + " MD5 S " + send;
-     System.out.println(send);
-     dos.writeBytes(send); dos.writeByte(0xd); dos.writeByte(0xa); 
+     try{
+      Socket https;
+      if(id.substring(id.length()-7,id.length()).equals("msn.com")) https = new Socket("msnialogin.passport.com",80);
+      else if(id.substring(id.length()-11,id.length()).equals("hotmail.com")) https = new Socket("loginnet.passport.com",80);
+      else https = new Socket("login.passport.com",80);
+      DataInputStream udis = new DataInputStream(https.getInputStream());
+      DataOutputStream udos = new DataOutputStream(https.getOutputStream());
+      udos.writeBytes("GET /login2.srf HTTP/1.1"); udos.writeByte(0xd); udos.writeByte(0xa);
+      udos.writeBytes("Host: login.passport.com"); udos.writeByte(0xd); udos.writeByte(0xa);
+      udos.writeBytes("User-Agent: SDRLurker"); udos.writeByte(0xd); udos.writeByte(0xa);
+      String idimsi="";
+      for(int i=0;i<id.length();i++) if(id.charAt(i)=='@') idimsi = idimsi + "%40"; else idimsi = idimsi + id.charAt(i);
+      udos.writeBytes("Authorization: Passport1.4 OrgVerb=GET,OrgURL=http%3A%2F%2Fmessenger%2Emsn%2Ecom,sign-in=" + idimsi + ",pwd=" + password + "," + param); udos.writeByte(0xd); udos.writeByte(0xa);
+      udos.writeByte(0xd); udos.writeByte(0xa); 
+      String imsi="", sendinfo="";
+      imsi = udis.readLine();
+      while(imsi.length()>0){
+       // System.out.println(imsi);
+       imsi = udis.readLine();
+       if(imsi.length()>=20) if(imsi.substring(0,20).equals("Authentication-Info:")) sendinfo = imsi.substring(location2(imsi,4)+9,location2(imsi,5)-2);
+      }
+      send = mnemonic + " " + trialid + " TWN S " + sendinfo;
+      System.out.println(send);
+      dos.writeBytes(send); dos.writeByte(0xd); dos.writeByte(0xa);
+     }catch(Exception e){
+      System.out.println(e);
+     }
+
     }
    }
    if(mnemonic.equals("SYN")){
@@ -103,8 +139,8 @@ class login extends Thread{
     dos.writeBytes(send); dos.writeByte(0xd); dos.writeByte(0xa);
    }
    if(mnemonic.equals("QRY")){
-    send = mnemonic + " " + trialid + " msmsgs@msnmsgr.com 32";
-    send2 = param + "Q1P7W2E4J9R8U3S5";
+    send = mnemonic + " " + trialid + " PROD0038W!61ZTF9 32";
+    send2 = param + "VT6PX?UQTM4WM%YR";
     md5code md = md5code.getInstance();
     send2 = md.hashData(send2.getBytes());
     System.out.println(send);
@@ -244,13 +280,6 @@ class login extends Thread{
   return r;  
  }
 
- private int location(String received,int space2){
-  int pointer,space;
-  for(pointer=0,space=0;pointer<=received.length()-1 && space<space2;pointer++)
-   if(received.charAt(pointer)==' ') space++;
-  return pointer;
- }
-
  public String[] needed(String receive){
   String[] parameters;
   parameters = new String[3];
@@ -262,16 +291,19 @@ class login extends Thread{
    if(receive.substring(0,3).equals("216")) rmnemonic = "216"; //사람 제거 에러
    if(receive.substring(0,3).equals("911")){ rmnemonic = "911"; error=true; trialid=0; } 
    if(receive.substring(0,3).equals("919")){ rmnemonic = "919"; error=true; trialid=0; }
+   if(receive.substring(0,3).equals("928")){ rmnemonic = "928"; error=true; trialid=0; }
    if(receive.substring(0,3).equals("500")){ rmnemonic = "500"; error=true; trialid=0; } 
    if(receive.substring(0,3).equals("601")){ rmnemonic = "601"; error=true; trialid=0; }// 여기까지 에러코드
 
    if(receive.substring(0,3).equals("INF"))  rmnemonic = "INF";
    if(receive.substring(0,3).equals("REA"))  rmnemonic = "REA";
+   if(receive.substring(0,3).equals("CVR"))  rmnemonic = "CVR";
+   if(receive.substring(0,3).equals("QRY"))  rmnemonic = "QRY";
    if(receive.substring(0,3).equals("USR")){
     rmnemonic = "USR";
     sp1 = location(receive,2);
     sp2 = location(receive,3);
-    if(receive.substring(sp1,sp2-1).equals("MD5")){
+    if(receive.substring(sp1,sp2-1).equals("TWN")){
      // parameters = new String[1];
      sp3 = location(receive,4);
      param = receive.substring(sp3,receive.length());
@@ -332,18 +364,13 @@ class login extends Thread{
    }
    if(receive.substring(0,3).equals("LST")){
     rmnemonic = "LST";
-    sp1 = location(receive,2);
-    sp2 = location(receive,3);
-    sp3 = location(receive,5);
+    sp1 = location(receive,1);
+    sp2 = location(receive,2);
+    sp3 = location(receive,3);
     parameters[0] = receive.substring(sp1,sp2-1);
-    parameters[1] = receive.substring(sp3,sp3+1);
-    if(!parameters[1].equals("0")){
-     sp4 = location(receive,6);
-     parameters[1] = receive.substring(sp3,sp4-1);
-     sp5 = location(receive,7);
-     parameters[2] = receive.substring(sp4,sp5-1);
-     param = parameters[2];
-    }
+    parameters[1] = receive.substring(sp2,sp3-1);
+    parameters[2] = receive.substring(sp3,receive.length());
+    param = parameters[0];
    }
   }
   return parameters;

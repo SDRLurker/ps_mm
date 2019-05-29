@@ -97,7 +97,8 @@ public class ps extends Frame implements ActionListener,ItemListener{
 
 
  class runserver extends Thread{
-  int rlnum=0,alnum=0,rlc=0,alc=0;
+  int user=0;
+  boolean usercheck=false;
   boolean check_list=false;
   public void run(){
    boolean rl[]=null;
@@ -113,41 +114,10 @@ public class ps extends Frame implements ActionListener,ItemListener{
     if(connect.rmnemonic.equals("209")) printmsg("대화명을 바꾸는데 실패하였습니다...");
     // if(connect.rmnemonic.equals("215")) check_list = false;
    
-    if(connect.rmnemonic.equals("LST") && need[0].equals("RL") && rlc > 0){
-     rls[rlc] = need[2];
-     rlc++;
-     if(alc == alnum && rlc == rlnum)  check_list=true;
-    }
-    if(connect.rmnemonic.equals("LST") && need[0].equals("RL") && rlnum == 0){
-     rlnum = Integer.parseInt(need[1]);
-     if(rlnum>0){
-      rl = new boolean[rlnum];
-      for(int i=0;i<rlnum;i++) rl[i] = false;
-      rls = new String[rlnum];
-      rls[rlc] = need[2];
-      rlc++;
-     }
-    }
-    if(connect.rmnemonic.equals("LST") && need[0].equals("AL") && alc > 0){
-     als[alc] = need[2];
-     alc++;
-    }
-    if(connect.rmnemonic.equals("LST") && need[0].equals("AL") && alnum == 0){
-     alnum = Integer.parseInt(need[1]);
-     if(alnum>0){
-      als = new String[alnum];
-      als[alc] = need[2];
-      alc++;
-     }
-    }
-    if(check_list){
-     for(int i=0;i<rlnum;i++){
-      for(int j=0;j<alnum;j++){
-       if(rls[i].equals(als[j])) { rl[i] = true; break; }}}
-     for(int k=0;k<rlnum;k++){
-      if(!rl[k]) { connect.param = rls[k]; connect.send("ADD","AL"); }}
-     check_list = false;
-    }
+    if(connect.rmnemonic.equals("LST") && need[2].equals("8")) connect.send("ADD","AL");
+    if(connect.rmnemonic.equals("LST") && need[2].equals("2")) connect.send("REM","AL");
+    if(connect.rmnemonic.equals("LST") && need[2].equals("10")) user++;
+    if(connect.rmnemonic.equals("QRY") && !usercheck){ System.out.println("등록한 사용자 수 : " + user); usercheck=true; }
    }
   }
  }
@@ -170,7 +140,7 @@ public class ps extends Frame implements ActionListener,ItemListener{
      while(!connect.error){
       connect.send("VER");
       connect.receive();
-      connect.send("INF");
+      connect.send("CVR");
       connect.receive();
       if(connect.error){
        printmsg("로그인에 실패하였습니다...");
@@ -179,7 +149,6 @@ public class ps extends Frame implements ActionListener,ItemListener{
        id.setEditable(true); 
        pass.setEditable(true);
        change.setEnabled(false);
-       dis.setEnabled(false);
        status.setEnabled(false);
        connections = false;
       }
